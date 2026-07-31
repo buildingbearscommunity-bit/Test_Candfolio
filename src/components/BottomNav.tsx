@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessageSquare, FileText, User } from 'lucide-react';
+import { Home, MessageSquare, FileText, User, ListChecks, UserRound } from 'lucide-react';
 import BrandLogoIcon from './BrandLogoIcon';
 
 export default function BottomNav() {
@@ -13,6 +13,8 @@ export default function BottomNav() {
     { name: 'Home', href: '/', icon: Home },
     { name: 'Exams', href: '/certifications', icon: BrandLogoIcon },
     { name: 'Interviews', href: '/interviews', icon: MessageSquare },
+    { name: 'Productivity', href: '/productivity', icon: ListChecks },
+    { name: 'Portfolio', href: '/portfolio', icon: UserRound },
     { name: 'Resume', href: '/resume', icon: FileText },
     { name: 'Profile', href: '/profile', icon: User }
   ];

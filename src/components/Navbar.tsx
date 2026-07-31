@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useKorsayStore } from '@/lib/store';
-import { Menu, X, FileText, Briefcase, HelpCircle, Mail, Mic, Files, Volume2 } from 'lucide-react';
+import { Menu, X, FileText, Briefcase, HelpCircle, Mail, Mic, Files, Volume2, ListChecks, UserRound } from 'lucide-react';
 import BrandLogoIcon from './BrandLogoIcon';
 
 export default function Navbar() {
@@ -18,6 +18,8 @@ export default function Navbar() {
     { name: 'Certifications', href: '/certifications' },
     { name: 'Interviews', href: '/interviews' },
     { name: 'SpeakPro', href: '/speakpro' },
+    { name: 'Productivity', href: '/productivity' },
+    { name: 'Portfolio', href: '/portfolio' },
     { name: 'Text to Speech', href: '/text-to-speech' },
     { name: 'PDF Tools', href: '/pdf-tools' },
     { name: 'Resume', href: '/resume' }
@@ -167,6 +169,8 @@ export default function Navbar() {
                     {link.name === 'Certifications' && <BrandLogoIcon className="h-4 w-4" />}
                     {link.name === 'Interviews' && <Briefcase className="h-4 w-4" />}
                     {link.name === 'SpeakPro' && <Mic className="h-4 w-4" />}
+                    {link.name === 'Productivity' && <ListChecks className="h-4 w-4" />}
+                    {link.name === 'Portfolio' && <UserRound className="h-4 w-4" />}
                     {link.name === 'Text to Speech' && <Volume2 className="h-4 w-4" />}
                     {link.name === 'PDF Tools' && <Files className="h-4 w-4" />}
                     {link.name === 'Resume' && <FileText className="h-4 w-4" />}
