@@ -25,7 +25,7 @@ export default function BottomNav() {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 h-16 border-t border-zinc-100 bg-white/95 backdrop-blur-md flex justify-around items-center px-2 sm:hidden no-print">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 h-16 border-t border-accent/10 bg-[#F0EDE5]/92 shadow-[0_-12px_34px_rgba(100,61,70,0.14),inset_0_1px_0_rgba(255,255,255,0.82)] backdrop-blur-md flex justify-around items-center px-2 sm:hidden no-print">
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const active = isActive(tab.href);
@@ -33,8 +33,8 @@ export default function BottomNav() {
           <Link
             key={tab.name}
             href={tab.href}
-            className={`flex flex-col items-center justify-center flex-1 h-full py-1 text-center select-none tap-active transition-colors duration-150 ${
-              active ? 'text-accent' : 'text-zinc-400 hover:text-zinc-600'
+            className={`flex flex-col items-center justify-center flex-1 h-12 rounded-2xl py-1 text-center select-none tap-active transition-all duration-150 ${
+              active ? 'bg-white/75 text-accent shadow-[5px_6px_14px_rgba(100,61,70,0.10),inset_0_1px_0_rgba(255,255,255,0.88)]' : 'text-zinc-400 hover:bg-white/45 hover:text-accent'
             }`}
           >
             <Icon className="h-5.5 w-5.5 stroke-[1.75]" />

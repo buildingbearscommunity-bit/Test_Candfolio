@@ -41,7 +41,7 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full border-b border-zinc-100 bg-white/80 backdrop-blur-md no-print">
+      <header className="sticky top-0 z-40 w-full border-b border-accent/10 bg-[#F0EDE5]/88 shadow-[0_12px_34px_rgba(100,61,70,0.14),inset_0_1px_0_rgba(255,255,255,0.82)] backdrop-blur-md no-print">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex flex-shrink-0 items-center">
             <Link href="/" className="flex items-center gap-3 tap-active" aria-label="Candfolio home">
@@ -56,13 +56,15 @@ export default function Navbar() {
             </Link>
           </div>
 
-          <nav className="hidden sm:flex space-x-8">
+          <nav className="hidden rounded-full border border-accent/10 bg-white/45 px-3 py-1.5 shadow-[inset_2px_2px_7px_rgba(100,61,70,0.10),inset_-2px_-2px_7px_rgba(255,255,255,0.84)] sm:flex sm:space-x-2">
             {navLinks.map((link) => (
               <Link
                 key={link.name}
                 href={link.href}
-                className={`text-sm font-medium transition-colors hover:text-accent duration-150 ${
-                  isActive(link.href) ? 'text-accent border-b-2 border-accent pt-1 pb-1' : 'text-zinc-600'
+                className={`rounded-full px-3 py-1.5 text-sm font-semibold transition-all duration-150 ${
+                  isActive(link.href)
+                    ? 'bg-white text-accent shadow-[5px_6px_14px_rgba(100,61,70,0.12),inset_0_1px_0_rgba(255,255,255,0.94)]'
+                    : 'text-zinc-600 hover:bg-white/55 hover:text-accent hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.62)]'
                 }`}
               >
                 {link.name}
@@ -72,12 +74,12 @@ export default function Navbar() {
 
           <div className="flex items-center space-x-4">
             <div className="hidden sm:flex items-center space-x-4">
-              <button className="text-xs font-medium text-zinc-500 hover:text-zinc-900 transition-colors bg-zinc-50 px-3 py-1.5 rounded-lg border border-zinc-100 tap-active">
+              <button className="text-xs font-semibold text-zinc-600 hover:text-accent transition-all bg-white/70 px-3 py-1.5 rounded-xl border border-accent/10 shadow-[5px_6px_14px_rgba(100,61,70,0.10),inset_0_1px_0_rgba(255,255,255,0.88)] tap-active">
                 Sign up
               </button>
               
-              <Link href="/profile" className="flex items-center space-x-2 border border-zinc-100 p-1 pr-3 rounded-full hover:bg-zinc-50 transition-colors duration-150 tap-active">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-light text-accent text-xs font-semibold">
+              <Link href="/profile" className="flex items-center space-x-2 border border-accent/10 bg-white/58 p-1 pr-3 rounded-full shadow-[5px_6px_14px_rgba(100,61,70,0.10),inset_0_1px_0_rgba(255,255,255,0.88)] transition-all duration-150 hover:-translate-y-0.5 hover:bg-white/75 tap-active">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-light text-accent text-xs font-semibold shadow-[inset_2px_2px_6px_rgba(100,61,70,0.10),inset_-2px_-2px_6px_rgba(255,255,255,0.80)]">
                   {getInitials(guestProfile.name)}
                 </div>
                 <span className="text-xs font-medium text-zinc-700 max-w-[100px] truncate">
@@ -88,7 +90,7 @@ export default function Navbar() {
 
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-lg text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 focus:outline-none sm:hidden tap-active"
+              className="inline-flex items-center justify-center p-2 rounded-xl border border-accent/10 bg-white/55 text-zinc-500 shadow-[5px_6px_14px_rgba(100,61,70,0.10),inset_0_1px_0_rgba(255,255,255,0.88)] hover:text-accent focus:outline-none sm:hidden tap-active"
               aria-label="Toggle menu"
             >
               {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -104,7 +106,7 @@ export default function Navbar() {
             onClick={() => setMobileMenuOpen(false)}
           />
 
-          <div className="fixed right-0 top-0 bottom-0 w-80 bg-white p-6 shadow-xl flex flex-col justify-between">
+          <div className="fixed right-0 top-0 bottom-0 w-80 border-l border-accent/10 bg-[#F0EDE5] p-6 shadow-[inset_1px_0_0_rgba(255,255,255,0.72),-18px_0_48px_rgba(100,61,70,0.18)] flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between border-b border-zinc-100 pb-4 mb-6">
                 <Link href="/" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 tap-active">
@@ -125,7 +127,7 @@ export default function Navbar() {
                 </button>
               </div>
 
-              <div className="bg-zinc-50 border border-zinc-100 p-4 rounded-xl mb-6">
+              <div className="bg-white/68 border border-accent/10 p-4 rounded-2xl mb-6 shadow-[8px_10px_22px_rgba(100,61,70,0.12),inset_0_1px_0_rgba(255,255,255,0.90)]">
                 <div className="flex items-center space-x-3 mb-2">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent-light text-accent font-semibold text-sm">
                     {getInitials(guestProfile.name)}
@@ -139,7 +141,7 @@ export default function Navbar() {
                   <Link 
                     href="/profile" 
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-xs text-center w-full bg-white text-zinc-700 py-1.5 rounded-lg border border-zinc-200 font-medium hover:bg-zinc-50 transition-colors tap-active"
+                    className="text-xs text-center w-full bg-white text-zinc-700 py-1.5 rounded-xl border border-accent/10 font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.88),4px_5px_12px_rgba(100,61,70,0.08)] transition-all tap-active"
                   >
                     View profile
                   </Link>
@@ -155,10 +157,10 @@ export default function Navbar() {
                     key={link.name}
                     href={link.href}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors tap-active ${
+                    className={`flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all tap-active ${
                       isActive(link.href) 
-                        ? 'bg-accent-light/50 text-accent' 
-                        : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900'
+                        ? 'bg-white text-accent shadow-[5px_6px_14px_rgba(100,61,70,0.10),inset_0_1px_0_rgba(255,255,255,0.88)]' 
+                        : 'text-zinc-600 hover:bg-white/60 hover:text-accent hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.70)]'
                     }`}
                   >
                     {link.name === 'Home' && <BrandLogoIcon className="h-4 w-4" />}
