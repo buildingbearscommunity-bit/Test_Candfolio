@@ -108,10 +108,13 @@ export default function PdfToolsPage() {
                 Explore Tools
                 <ArrowRight className="ml-2 h-4 w-4" />
               </button>
-              <button className="inline-flex items-center justify-center rounded-2xl border border-[#872341]/20 bg-[#F0EDE5]/80 px-6 py-3 text-sm font-semibold text-[#872341] shadow-sm transition hover:-translate-y-0.5 hover:bg-[#872341]/10">
+              <Link
+                href="/pdf-tools/merge-pdf"
+                className="inline-flex items-center justify-center rounded-2xl border border-[#872341]/20 bg-[#F0EDE5]/80 px-6 py-3 text-sm font-semibold text-[#872341] shadow-sm transition hover:-translate-y-0.5 hover:bg-[#872341]/10"
+              >
                 <Upload className="mr-2 h-4 w-4" />
                 Upload PDF
-              </button>
+              </Link>
             </div>
           </div>
 

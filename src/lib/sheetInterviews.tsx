@@ -74,10 +74,8 @@ export function SheetInterviewsProvider({ children }: { children: React.ReactNod
     try {
       const res = await fetch(INTERVIEWS_URL, { cache: 'no-store' });
       if (!res.ok) {
-        console.error(`[Korsay] Interviews fetch FAILED — status: ${res.status} ${res.statusText}`);
         throw new Error(`HTTP ${res.status}`);
       }
-      console.log(`[Korsay] Interviews fetch succeeded — status: ${res.status}`);
       const data = await res.json();
 
       console.log('[Korsay] Raw interviews response:', data);

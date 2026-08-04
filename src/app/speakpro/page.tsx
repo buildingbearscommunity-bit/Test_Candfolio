@@ -37,6 +37,7 @@ import {
   Volume2,
   Wallet,
 } from 'lucide-react';
+import { SPEAKPRO_TOPIC_SCRIPTS } from '@/lib/speakproScripts';
 
 type Difficulty = 'Beginner' | 'Intermediate' | 'Advanced';
 type PracticeMode = 'Teleprompter' | 'Paragraph Reading' | 'Interview Simulation' | 'Presentation Practice' | 'Story Reading';
@@ -70,48 +71,32 @@ type StoredStats = {
 const CUSTOM_SCRIPT_KEY = 'speakpro_custom_script';
 const STATS_KEY = 'speakpro_stats';
 
-const selfIntroductionScript = `Hello everyone.
-My name is Rahul.
-I recently completed my Bachelor's degree in Computer Science.
-
-I am passionate about Data Analytics and Business Intelligence.
-
-I enjoy solving business problems using Power BI and SQL.
-
-I have completed several real-world projects.
-
-My strengths are quick learning, teamwork and communication.
-
-I am excited to start my professional career and contribute to an organization.
-
-Thank you.`;
-
 const topics: Topic[] = [
-  { title: 'Self Introduction', description: 'Open interviews and meetings with a polished introduction.', icon: Mic, script: selfIntroductionScript },
-  { title: 'HR Interview', description: 'Answer common HR questions with structure and warmth.', icon: Users, script: 'Good morning. Thank you for giving me this opportunity. I am excited to discuss my background, strengths and career goals. I believe my learning mindset, communication skills and project experience can help me contribute effectively to your organization.' },
-  { title: 'Technical Interview', description: 'Explain tools, logic and projects in simple language.', icon: Code2, script: 'In my project, I collected raw data, cleaned it using SQL, created useful measures and built a dashboard in Power BI. The goal was to convert business questions into clear insights that support better decisions.' },
-  { title: 'Tell Me About Yourself', description: 'Build a memorable answer with education, skills and goals.', icon: MessageSquare, script: 'I am a motivated learner with a strong interest in data analytics. I have practiced SQL, Power BI and Excel through real projects. I enjoy understanding business problems and presenting insights clearly.' },
-  { title: 'Strengths & Weaknesses', description: 'Talk about strengths and growth areas without sounding unsure.', icon: Trophy, script: 'My strengths are quick learning, consistency and teamwork. One area I am improving is public speaking. I practice regularly by recording myself, reviewing my clarity and speaking in a structured way.' },
-  { title: 'Project Explanation', description: 'Explain project goals, steps, tools and outcomes confidently.', icon: FolderCode, script: 'The objective of my project was to analyze sales performance. I cleaned the data, created KPIs, designed charts and shared recommendations. This helped identify top products, weak regions and monthly trends.' },
-  { title: 'Explain Your Resume', description: 'Walk through resume sections without missing key points.', icon: FileText, script: 'My resume begins with my education and core skills. I have highlighted projects in Power BI, SQL and Excel because they show my practical ability. I have also included achievements that reflect discipline and learning.' },
-  { title: 'Why Should We Hire You?', description: 'Give a persuasive answer focused on value and attitude.', icon: BadgeCheck, script: 'You should hire me because I am trainable, responsible and serious about building my career. I can learn quickly, communicate well with teams and apply my technical skills to solve business problems.' },
-  { title: 'Communication at Workplace', description: 'Speak clearly with managers, peers and teams.', icon: Building2, script: 'At work, I believe communication should be clear, respectful and action-focused. I listen carefully, ask questions when needed and keep the team updated on progress and blockers.' },
-  { title: 'Client Meetings', description: 'Practice polite, concise client-facing conversation.', icon: Briefcase, script: 'Thank you for joining the meeting. Today I will quickly summarize the progress, discuss the key observations and confirm the next steps. Please feel free to share your questions at any point.' },
-  { title: 'Daily Office Conversation', description: 'Improve common professional phrases used every day.', icon: MessageSquare, script: 'Good morning. I have completed the first task and I am currently working on the report. I will share an update by the end of the day and let you know if I need any clarification.' },
-  { title: 'Team Discussion', description: 'Share ideas and respond to teammates with confidence.', icon: Users, script: 'I agree with that point. I would also like to add one suggestion. If we review the data before finalizing the plan, we can reduce errors and make a stronger decision.' },
-  { title: 'Public Speaking', description: 'Develop stage presence, pacing and audience connection.', icon: Volume2, script: 'Good evening everyone. Today I want to share a simple idea that can improve the way we learn. Confidence does not come before practice. Confidence grows because of practice.' },
-  { title: 'Group Discussion', description: 'Enter, support and conclude group discussions politely.', icon: Users, script: 'I would like to share my view on this topic. In my opinion, technology improves productivity when people use it with the right skills, discipline and clear purpose.' },
-  { title: 'Presentation Skills', description: 'Deliver strong openings, transitions and conclusions.', icon: Presentation, script: 'Welcome everyone. In this presentation, I will cover the problem, the analysis, the key findings and the final recommendation. Let us begin with the business objective.' },
-  { title: 'Phone Conversation', description: 'Practice professional calls with clarity and etiquette.', icon: Phone, script: 'Hello, this is Rahul speaking. I am calling to follow up on our discussion. Is this a good time to talk, or should I call you later?' },
-  { title: 'Email Discussion', description: 'Speak through email points before writing or meetings.', icon: MessageSquare, script: 'I wanted to discuss the email I sent earlier. The main point is the project timeline. I have suggested two options and I would appreciate your feedback on the preferred approach.' },
-  { title: 'Problem Solving', description: 'Explain issues, root causes and solutions logically.', icon: SlidersHorizontal, script: 'First, I try to understand the problem clearly. Then I identify possible causes, check the data and compare solutions. Finally, I choose the option that is practical and measurable.' },
-  { title: 'Leadership Communication', description: 'Practice ownership, delegation and decision communication.', icon: Award, script: 'As a team lead, I would clarify the goal, divide responsibilities and track progress. I would also support team members and make sure communication remains transparent.' },
-  { title: 'Salary Negotiation', description: 'Discuss compensation professionally and respectfully.', icon: Wallet, script: 'Thank you for the offer. I am excited about the role. Based on my skills, preparation and market research, I would like to discuss whether there is flexibility in the compensation package.' },
-  { title: 'Customer Communication', description: 'Handle customer questions with empathy and clarity.', icon: Heart, script: 'I understand your concern, and I am sorry for the inconvenience. Let me check the details and explain the next steps clearly so we can resolve this as soon as possible.' },
-  { title: 'Sales Pitch', description: 'Present value, outcomes and next steps with confidence.', icon: BarChart3, script: 'Our solution helps teams save time, reduce manual work and make better decisions. The key benefit is that you can track performance clearly and act faster.' },
-  { title: 'Confidence Building', description: 'Use affirmations and structured speaking drills.', icon: Star, script: 'I can speak clearly. I can improve with practice. I do not need perfect English to communicate well. I need clarity, confidence and consistency.' },
-  { title: 'Pronunciation Practice', description: 'Practice pacing, stress and difficult professional words.', icon: Volume2, script: 'Analytics. Communication. Responsibility. Presentation. Opportunity. Organization. Professional. Development. I will speak slowly, clearly and confidently.' },
-  { title: 'Story Telling', description: 'Make answers memorable with situation, action and result.', icon: BookOpen, script: 'During my project, I faced a challenge with messy data. I cleaned the data step by step, created useful dashboards and presented insights that made the final report stronger.' },
+  { title: 'Self Introduction', description: 'Open interviews and meetings with a polished introduction.', icon: Mic, script: SPEAKPRO_TOPIC_SCRIPTS['Self Introduction'] },
+  { title: 'HR Interview', description: 'Answer common HR questions with structure and warmth.', icon: Users, script: SPEAKPRO_TOPIC_SCRIPTS['HR Interview'] },
+  { title: 'Technical Interview', description: 'Explain tools, logic and projects in simple language.', icon: Code2, script: SPEAKPRO_TOPIC_SCRIPTS['Technical Interview'] },
+  { title: 'Tell Me About Yourself', description: 'Build a memorable answer with education, skills and goals.', icon: MessageSquare, script: SPEAKPRO_TOPIC_SCRIPTS['Tell Me About Yourself'] },
+  { title: 'Strengths & Weaknesses', description: 'Talk about strengths and growth areas without sounding unsure.', icon: Trophy, script: SPEAKPRO_TOPIC_SCRIPTS['Strengths & Weaknesses'] },
+  { title: 'Project Explanation', description: 'Explain project goals, steps, tools and outcomes confidently.', icon: FolderCode, script: SPEAKPRO_TOPIC_SCRIPTS['Project Explanation'] },
+  { title: 'Explain Your Resume', description: 'Walk through resume sections without missing key points.', icon: FileText, script: SPEAKPRO_TOPIC_SCRIPTS['Explain Your Resume'] },
+  { title: 'Why Should We Hire You?', description: 'Give a persuasive answer focused on value and attitude.', icon: BadgeCheck, script: SPEAKPRO_TOPIC_SCRIPTS['Why Should We Hire You?'] },
+  { title: 'Communication at Workplace', description: 'Speak clearly with managers, peers and teams.', icon: Building2, script: SPEAKPRO_TOPIC_SCRIPTS['Communication at Workplace'] },
+  { title: 'Client Meetings', description: 'Practice polite, concise client-facing conversation.', icon: Briefcase, script: SPEAKPRO_TOPIC_SCRIPTS['Client Meetings'] },
+  { title: 'Daily Office Conversation', description: 'Improve common professional phrases used every day.', icon: MessageSquare, script: SPEAKPRO_TOPIC_SCRIPTS['Daily Office Conversation'] },
+  { title: 'Team Discussion', description: 'Share ideas and respond to teammates with confidence.', icon: Users, script: SPEAKPRO_TOPIC_SCRIPTS['Team Discussion'] },
+  { title: 'Public Speaking', description: 'Develop stage presence, pacing and audience connection.', icon: Volume2, script: SPEAKPRO_TOPIC_SCRIPTS['Public Speaking'] },
+  { title: 'Group Discussion', description: 'Enter, support and conclude group discussions politely.', icon: Users, script: SPEAKPRO_TOPIC_SCRIPTS['Group Discussion'] },
+  { title: 'Presentation Skills', description: 'Deliver strong openings, transitions and conclusions.', icon: Presentation, script: SPEAKPRO_TOPIC_SCRIPTS['Presentation Skills'] },
+  { title: 'Phone Conversation', description: 'Practice professional calls with clarity and etiquette.', icon: Phone, script: SPEAKPRO_TOPIC_SCRIPTS['Phone Conversation'] },
+  { title: 'Email Discussion', description: 'Speak through email points before writing or meetings.', icon: MessageSquare, script: SPEAKPRO_TOPIC_SCRIPTS['Email Discussion'] },
+  { title: 'Problem Solving', description: 'Explain issues, root causes and solutions logically.', icon: SlidersHorizontal, script: SPEAKPRO_TOPIC_SCRIPTS['Problem Solving'] },
+  { title: 'Leadership Communication', description: 'Practice ownership, delegation and decision communication.', icon: Award, script: SPEAKPRO_TOPIC_SCRIPTS['Leadership Communication'] },
+  { title: 'Salary Negotiation', description: 'Discuss compensation professionally and respectfully.', icon: Wallet, script: SPEAKPRO_TOPIC_SCRIPTS['Salary Negotiation'] },
+  { title: 'Customer Communication', description: 'Handle customer questions with empathy and clarity.', icon: Heart, script: SPEAKPRO_TOPIC_SCRIPTS['Customer Communication'] },
+  { title: 'Sales Pitch', description: 'Present value, outcomes and next steps with confidence.', icon: BarChart3, script: SPEAKPRO_TOPIC_SCRIPTS['Sales Pitch'] },
+  { title: 'Confidence Building', description: 'Use affirmations and structured speaking drills.', icon: Star, script: SPEAKPRO_TOPIC_SCRIPTS['Confidence Building'] },
+  { title: 'Pronunciation Practice', description: 'Practice pacing, stress and difficult professional words.', icon: Volume2, script: SPEAKPRO_TOPIC_SCRIPTS['Pronunciation Practice'] },
+  { title: 'Story Telling', description: 'Make answers memorable with situation, action and result.', icon: BookOpen, script: SPEAKPRO_TOPIC_SCRIPTS['Story Telling'] },
 ];
 
 const folders = [
@@ -203,7 +188,7 @@ export default function SpeakProPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('topics');
   const [selectedTopic, setSelectedTopic] = useState<Topic>(topics[0]);
   const [selectedScript, setSelectedScript] = useState<PracticeScript | null>(null);
-  const [scriptText, setScriptText] = useState(selfIntroductionScript);
+  const [scriptText, setScriptText] = useState(topics[0].script);
   const [customScript, setCustomScript] = useState('');
   const [practiceMode, setPracticeMode] = useState<PracticeMode>('Teleprompter');
   const [isPlaying, setIsPlaying] = useState(false);

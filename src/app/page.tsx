@@ -5,8 +5,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import {
   Award, MessageSquare, FileText, ArrowRight,
-  Star, Shield, Zap, ArrowUpRight, Clock, BarChart2,
-  Tag, RefreshCw,
+  Star, Shield, ArrowUpRight, Clock, BarChart2,
+  Tag, RefreshCw, SearchCheck, ListChecks, UserRound, Mic, Files, Volume2,
+  Calculator,
 } from 'lucide-react';
 import { useSheetCourses } from '@/lib/sheetCourses';
 import { useCertificationCards } from '@/lib/sheetExams';
@@ -56,6 +57,55 @@ export default function Home() {
       icon: FileText,
       href: '/resume',
       cta: 'Build resume'
+    },
+    {
+      title: 'Jobs',
+      description: 'Discover verified career opportunities, match roles with your resume, and track applications.',
+      icon: SearchCheck,
+      href: '/jobs',
+      cta: 'Find jobs'
+    },
+    {
+      title: 'Portfolio',
+      description: 'Publish a recruiter-ready professional profile generated automatically from your resume.',
+      icon: UserRound,
+      href: '/portfolio',
+      cta: 'Create profile'
+    },
+    {
+      title: 'Productivity',
+      description: 'Manage tasks, habits, streaks, and career routines in a focused productivity workspace.',
+      icon: ListChecks,
+      href: '/productivity',
+      cta: 'Plan work'
+    },
+    {
+      title: 'Calculators Hub',
+      description: 'Use smart calculators for education, career, HR, finance, business, and everyday planning.',
+      icon: Calculator,
+      href: '/calculators',
+      cta: 'Calculate smarter'
+    },
+    {
+      title: 'SpeakPro',
+      description: 'Practice speaking, scripts, and teleprompter sessions for interviews and presentations.',
+      icon: Mic,
+      href: '/speakpro',
+      cta: 'Practice speaking'
+    },
+    {
+      title: 'PDF tools',
+      description: 'Use fast document utilities for merging, splitting, organizing, and preparing PDFs.',
+      icon: Files,
+      href: '/pdf-tools',
+      cta: 'Open tools'
+    },
+    {
+      title: 'Text to Speech',
+      description: 'Preview the upcoming document-to-voice workspace for learning and accessibility workflows.',
+      icon: Volume2,
+      href: '/text-to-speech',
+      cta: 'View preview'
     }
   ];
 
@@ -87,7 +137,7 @@ export default function Home() {
             <RefreshCw className="h-8 w-8 text-zinc-300 mb-3 animate-spin-slow" />
             <h3 className="text-sm font-bold text-zinc-900">Certifications are updating</h3>
             <p className="text-xs text-zinc-500 mt-1 max-w-sm">
-              We're syncing our latest course catalog. Please check back shortly.
+              We&apos;re syncing our latest course catalog. Please check back shortly.
             </p>
           </div>
         ) : !loading && courses.length === 0 ? (
@@ -204,35 +254,6 @@ export default function Home() {
 
       <WhyChooseKorsay />
 
-      <section className="hero-accent text-center max-w-3xl mx-auto space-y-7 pt-8 sm:pt-14">
-        <div className="inline-flex items-center space-x-2 bg-accent-light/60 px-3.5 py-1.5 rounded-full border border-accent/15">
-          <Zap className="h-3.5 w-3.5 text-accent" />
-          <span className="text-xs font-medium text-accent">Introducing guest profiles — no login required</span>
-        </div>
-        
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-zinc-900 leading-[1.15]">
-          Get certified. <br />
-          Practice interviews. <br />
-          Build your resume.
-        </h1>
-        
-        <p className="text-base sm:text-lg text-zinc-600 max-w-xl mx-auto font-normal leading-relaxed">
-          Accelerate your career with industry-aligned certification practice, interactive AI-grade interviews, and automatic credentials integrated directly into your professional resume.
-        </p>
-
-        <div className="pt-2 flex flex-col sm:flex-row justify-center items-center gap-3">
-          <Link href="/certifications" className="btn-primary w-full sm:w-auto tap-active">
-            Explore certifications
-          </Link>
-          <Link
-            href="/resume"
-            className="w-full sm:w-auto text-center bg-white text-zinc-700 px-6 py-2.5 rounded-xl font-medium border border-zinc-200 hover:bg-zinc-50 hover:border-zinc-300 hover:shadow-sm transition-all duration-150 tap-active text-sm"
-          >
-            Create your resume
-          </Link>
-        </div>
-      </section>
-
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {modules.map((m) => {
           const Icon = m.icon;
@@ -321,14 +342,15 @@ export default function Home() {
               <li><Link href="/certifications" className="hover:text-accent transition-colors duration-150">Practice exams</Link></li>
               <li><Link href="/interviews" className="hover:text-accent transition-colors duration-150">Mock interviews</Link></li>
               <li><Link href="/resume" className="hover:text-accent transition-colors duration-150">Resume builder</Link></li>
+              <li><Link href="/calculators" className="hover:text-accent transition-colors duration-150">Calculators hub</Link></li>
             </ul>
           </div>
           <div>
             <h4 className="text-xs font-semibold text-zinc-900 tracking-wider uppercase mb-3">About</h4>
             <ul className="space-y-2 text-xs">
-              <li><Link href="#" className="hover:text-accent transition-colors duration-150">Company bio</Link></li>
-              <li><Link href="#" className="hover:text-accent transition-colors duration-150">Privacy policy</Link></li>
-              <li><Link href="#" className="hover:text-accent transition-colors duration-150">Terms of service</Link></li>
+              <li><Link href="/company-bio" className="hover:text-accent transition-colors duration-150">Company bio</Link></li>
+              <li><Link href="/privacy-policy" className="hover:text-accent transition-colors duration-150">Privacy policy</Link></li>
+              <li><Link href="/terms-of-service" className="hover:text-accent transition-colors duration-150">Terms of service</Link></li>
             </ul>
           </div>
           <div>

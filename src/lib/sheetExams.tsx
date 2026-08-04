@@ -74,10 +74,8 @@ export function SheetExamsProvider({ children }: { children: React.ReactNode }) 
 
       const res = await fetch(url.toString(), { cache: 'no-store' });
       if (!res.ok) {
-        console.error(`[Korsay] Exam fetch FAILED — status: ${res.status} ${res.statusText}`);
         throw new Error(`HTTP ${res.status}`);
       }
-      console.log(`[Korsay] Exam fetch succeeded — status: ${res.status}`);
       const data = await res.json();
 
       console.log('[Korsay] Raw certifications exam response:', data);

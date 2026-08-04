@@ -20,6 +20,11 @@ type OutputFile = {
   bytes: Uint8Array;
 };
 
+type ExtractedDocument = {
+  name: string;
+  text: string;
+};
+
 type PdfJsDocument = {
   numPages: number;
   getPage(pageNumber: number): Promise<PdfJsPage>;
@@ -35,7 +40,8 @@ type PdfToolRunnerProps = {
   tool: PdfTool;
 };
 
-const brand = rgb(0, 70 / 255, 67 / 255);
+const brand = rgb(135 / 255, 35 / 255, 65 / 255);
+const gold = rgb(201 / 255, 162 / 255, 39 / 255);
 
 function isPdf(file: File) {
   return file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
@@ -46,7 +52,11 @@ function isImage(file: File) {
 }
 
 function isTextLike(file: File) {
-  return file.type.startsWith('text/') || /\.(txt|md|html|rtf|csv)$/i.test(file.name);
+  return file.type.startsWith('text/') || /\.(txt|md|html|rtf|csv|json)$/i.test(file.name);
+}
+
+function isOfficeLike(file: File) {
+  return /\.(docx|xlsx|pptx|odt|ods|odp|epub)$/i.test(file.name);
 }
 
 function getBaseName(fileName: string) {
@@ -103,8 +113,12 @@ async function savePdf(doc: PDFDocument, name: string): Promise<OutputFile> {
 
 async function imageToPngBytes(file: File) {
   if (file.type === 'image/png') return new Uint8Array(await file.arrayBuffer());
-
-  const image = await loadImage(file);
+  let image: ImageBitmap | HTMLImageElement;
+  try {
+    image = await loadImage(file);
+  } catch {
+    throw new Error(`${file.name} could not be read by this browser. Try PNG, JPG, WEBP, SVG, or another supported image format.`);
+  }
   const canvas = document.createElement('canvas');
   canvas.width = image.width;
   canvas.height = image.height;
@@ -117,8 +131,12 @@ async function imageToPngBytes(file: File) {
 }
 
 async function loadImage(file: File): Promise<ImageBitmap | HTMLImageElement> {
-  if ('createImageBitmap' in window) {
-    return createImageBitmap(file);
+  if ('createImageBitmap' in window && !/svg/i.test(file.type) && !/\.svg$/i.test(file.name)) {
+    try {
+      return await createImageBitmap(file);
+    } catch {
+      // Fall back to <img>; some browsers reject WEBP/TIFF/HEIC through createImageBitmap.
+    }
   }
 
   const url = URL.createObjectURL(file);
@@ -152,36 +170,83 @@ async function convertImagesToPdf(files: File[], title: string) {
   return savePdf(doc, `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.pdf`);
 }
 
-async function textToPdf(files: File[], title: string) {
+async function extractDocumentText(file: File): Promise<ExtractedDocument> {
+  const lower = file.name.toLowerCase();
+  if (isTextLike(file)) {
+    let text = await file.text();
+    if (lower.endsWith('.html')) text = text.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ');
+    if (lower.endsWith('.rtf')) text = text.replace(/\\'[0-9a-f]{2}/gi, ' ').replace(/[{}]/g, ' ').replace(/\\[a-z]+\d* ?/gi, ' ');
+    return { name: file.name, text };
+  }
+
+  if (!isOfficeLike(file)) throw new Error(`${file.name} is not a supported document format.`);
+  const zip = await JSZip.loadAsync(await file.arrayBuffer());
+  const parts: string[] = [];
+  const wanted = Object.keys(zip.files).filter((path) =>
+    /word\/document\.xml|xl\/sharedStrings\.xml|ppt\/slides\/slide\d+\.xml|content\.xml|OPS\/.*\.xhtml|OEBPS\/.*\.xhtml/i.test(path)
+  );
+  for (const path of wanted) {
+    const xml = await zip.files[path].async('text');
+    parts.push(xml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
+  }
+  const text = parts.filter(Boolean).join('\n\n');
+  if (!text.trim()) throw new Error(`No readable text was found in ${file.name}.`);
+  return { name: file.name, text };
+}
+
+async function documentsToPdf(files: File[], title: string) {
+  const extracted: ExtractedDocument[] = [];
+  for (const file of files) {
+    if (isTextLike(file) || isOfficeLike(file)) extracted.push(await extractDocumentText(file));
+  }
+  if (extracted.length === 0) throw new Error('Please upload at least one supported office or text document.');
+
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
 
-  for (const file of files) {
-    if (!isTextLike(file)) continue;
-    const text = await file.text();
-    const lines = text.split(/\r?\n/);
+  for (const item of extracted) {
+    const lines = item.text.split(/\r?\n/).flatMap((line) => wrapLine(line, 92));
     let page = doc.addPage([595, 842]);
     let y = 790;
+    page.drawText(getBaseName(item.name), { x: 48, y, size: 16, font: bold, color: brand });
+    y -= 30;
     for (const line of lines) {
       if (y < 50) {
         page = doc.addPage([595, 842]);
         y = 790;
       }
-      page.drawText(line.slice(0, 95), { x: 48, y, size: 11, font, color: brand });
+      page.drawText(line, { x: 48, y, size: 11, font, color: brand });
       y -= 17;
     }
   }
 
-  if (doc.getPageCount() === 0) throw new Error('Please upload a text-like file.');
   doc.setTitle(title);
   return savePdf(doc, `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.pdf`);
 }
 
+function wrapLine(line: string, max = 95) {
+  const words = line.trim().split(/\s+/);
+  if (words.length === 0 || !words[0]) return [''];
+  const lines: string[] = [];
+  let current = '';
+  for (const word of words) {
+    if (`${current} ${word}`.trim().length > max) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = `${current} ${word}`.trim();
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
 async function loadPdfJsDocument(file: File): Promise<PdfJsDocument> {
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf');
+  pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
   const params = {
     data: await file.arrayBuffer(),
-    disableWorker: true,
   } as unknown as Parameters<typeof pdfjs.getDocument>[0];
   const task = pdfjs.getDocument(params);
   return task.promise as unknown as Promise<PdfJsDocument>;
@@ -246,6 +311,24 @@ async function convertPdfToTextLike(file: File, tool: PdfTool): Promise<OutputFi
     return textFile(`${getBaseName(file.name)}.txt`, 'text/plain', text);
   }
   return textFile(`${getBaseName(file.name)}.txt`, 'text/plain', text);
+}
+
+async function extractPdfMetadata(file: File) {
+  const pdf = await PDFDocument.load(await readFileBytes(file), { ignoreEncryption: true, updateMetadata: false });
+  const report = [
+    'Candfolio PDF Metadata Report',
+    '',
+    `File: ${file.name}`,
+    `Pages: ${pdf.getPageCount()}`,
+    `Title: ${pdf.getTitle() || 'Not set'}`,
+    `Author: ${pdf.getAuthor() || 'Not set'}`,
+    `Subject: ${pdf.getSubject() || 'Not set'}`,
+    `Creator: ${pdf.getCreator() || 'Not set'}`,
+    `Producer: ${pdf.getProducer() || 'Not set'}`,
+    `Creation Date: ${pdf.getCreationDate()?.toISOString() || 'Not set'}`,
+    `Modification Date: ${pdf.getModificationDate()?.toISOString() || 'Not set'}`,
+  ].join('\n');
+  return textFile(`${getBaseName(file.name)}-metadata.txt`, 'text/plain', report);
 }
 
 async function convertPdfToImages(file: File, tool: PdfTool): Promise<OutputFile> {
@@ -321,6 +404,159 @@ async function splitPdf(file: File) {
   };
 }
 
+async function buildBooklet(file: File) {
+  const input = await PDFDocument.load(await readFileBytes(file), { ignoreEncryption: true, updateMetadata: false });
+  const output = await PDFDocument.create();
+  const indices = input.getPageIndices();
+  const order: number[] = [];
+  let left = 0;
+  let right = indices.length - 1;
+  while (left <= right) {
+    order.push(right);
+    if (left !== right) order.push(left);
+    left += 1;
+    right -= 1;
+  }
+  const pages = await output.copyPages(input, order);
+  pages.forEach((page) => output.addPage(page));
+  output.setTitle('Booklet PDF');
+  return savePdf(output, `${getBaseName(file.name)}-booklet.pdf`);
+}
+
+async function pagesPerSheet(file: File) {
+  const input = await PDFDocument.load(await readFileBytes(file), { ignoreEncryption: true, updateMetadata: false });
+  const output = await PDFDocument.create();
+  const embedded = await output.embedPdf(await readFileBytes(file), input.getPageIndices());
+  for (let index = 0; index < embedded.length; index += 2) {
+    const page = output.addPage([842, 595]);
+    const left = embedded[index];
+    page.drawPage(left, { x: 28, y: 44, width: 380, height: 507 });
+    if (embedded[index + 1]) page.drawPage(embedded[index + 1], { x: 434, y: 44, width: 380, height: 507 });
+  }
+  output.setTitle('Pages Per Sheet');
+  return savePdf(output, `${getBaseName(file.name)}-2-up.pdf`);
+}
+
+async function createTemplatePdf(tool: PdfTool, textInput: string) {
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const page = doc.addPage([595, 842]);
+  page.drawRectangle({ x: 0, y: 780, width: 595, height: 62, color: brand });
+  page.drawText(tool.name, { x: 44, y: 804, size: 22, font: bold, color: rgb(1, 1, 1) });
+  page.drawText('Candfolio professional document starter', { x: 44, y: 764, size: 10, font, color: brand });
+  const sections = getTemplateSections(tool.slug);
+  let y = 718;
+  for (const section of sections) {
+    page.drawText(section, { x: 44, y, size: 13, font: bold, color: brand });
+    page.drawRectangle({ x: 44, y: y - 54, width: 507, height: 42, borderColor: rgb(0.82, 0.72, 0.76), borderWidth: 1 });
+    y -= 82;
+  }
+  const note = textInput.trim();
+  if (note && note !== tool.name) page.drawText(`Note: ${note.slice(0, 92)}`, { x: 44, y: 50, size: 10, font, color: brand });
+  return savePdf(doc, `${tool.slug}.pdf`);
+}
+
+function getTemplateSections(slug: string) {
+  if (slug.includes('invoice')) return ['Client Details', 'Invoice Items', 'Taxes & Discounts', 'Payment Terms', 'Authorized Signature'];
+  if (slug.includes('resume')) return ['Professional Summary', 'Experience', 'Education', 'Skills', 'Certifications'];
+  if (slug.includes('agreement') || slug.includes('legal')) return ['Parties', 'Scope', 'Terms', 'Confidentiality', 'Signatures'];
+  if (slug.includes('tax')) return ['Taxpayer Details', 'Income Summary', 'Deductions', 'Declaration'];
+  if (slug.includes('hr')) return ['Employee Details', 'Policy / Request', 'Approvals', 'Remarks'];
+  if (slug.includes('government')) return ['Applicant Details', 'Identity Information', 'Request Details', 'Declaration'];
+  return ['Overview', 'Details', 'Checklist', 'Approvals', 'Notes'];
+}
+
+async function createUtilityOutput(tool: PdfTool, files: File[], textInput: string) {
+  if (tool.slug === 'download-pdf' || tool.slug === 'pdf-viewer' || tool.slug === 'document-preview' || tool.slug === 'print-pdf' || tool.slug === 'share-pdf') {
+    const file = files.find(isPdf);
+    if (!file) throw new Error('Please upload a PDF for this utility.');
+    return { name: `${getBaseName(file.name)}-${tool.slug}.pdf`, mime: 'application/pdf', bytes: await readFileBytes(file) };
+  }
+  if (tool.slug === 'create-pdf' || tool.slug === 'scan-to-pdf') {
+    if (files.some(isImage)) return convertImagesToPdf(files, tool.name);
+    if (files.some((file) => isTextLike(file) || isOfficeLike(file))) return documentsToPdf(files, tool.name);
+    return createTemplatePdf(tool, textInput);
+  }
+  const report = [
+    `Candfolio ${tool.name}`,
+    '',
+    'This utility is ready for production API integration.',
+    `Files selected: ${files.map((file) => file.name).join(', ') || 'None'}`,
+    `Generated: ${new Date().toLocaleString()}`,
+    '',
+    textInput.trim() && textInput !== tool.name ? `Notes: ${textInput.trim()}` : 'Use this workflow to track recent files, cloud actions, and document history.',
+  ].join('\n');
+  return textFile(`${tool.slug}-workflow.txt`, 'text/plain', report);
+}
+
+async function processImageTool(tool: PdfTool, files: File[], textInput: string): Promise<OutputFile> {
+  const imageFile = files.find(isImage);
+  if (!imageFile) throw new Error('Please upload an image for this tool.');
+  const image = await loadImage(imageFile);
+  const canvas = document.createElement('canvas');
+  const sourceWidth = image.width;
+  const sourceHeight = image.height;
+  const contextScale = tool.slug === 'resize-image' ? 0.5 : 1;
+  const rotated = tool.slug === 'rotate-image';
+  canvas.width = rotated ? sourceHeight : Math.max(1, Math.round(sourceWidth * contextScale));
+  canvas.height = rotated ? sourceWidth : Math.max(1, Math.round(sourceHeight * contextScale));
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Could not prepare image canvas.');
+  if (tool.slug === 'rotate-image') {
+    context.translate(canvas.width / 2, canvas.height / 2);
+    context.rotate(Math.PI / 2);
+    context.drawImage(image, -sourceWidth / 2, -sourceHeight / 2);
+  } else if (tool.slug === 'flip-image') {
+    context.translate(canvas.width, 0);
+    context.scale(-1, 1);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  } else if (tool.slug === 'crop-image') {
+    const size = Math.min(sourceWidth, sourceHeight);
+    context.drawImage(image, (sourceWidth - size) / 2, (sourceHeight - size) / 2, size, size, 0, 0, canvas.width, canvas.height);
+  } else {
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  }
+
+  if (tool.slug === 'watermark-image') {
+    context.globalAlpha = 0.72;
+    context.fillStyle = '#872341';
+    context.font = `${Math.max(18, canvas.width / 18)}px sans-serif`;
+    context.fillText(textInput.trim() || 'Candfolio', 24, Math.max(42, canvas.height - 32));
+  }
+  if (tool.slug === 'enhance-image') {
+    context.globalCompositeOperation = 'soft-light';
+    context.fillStyle = 'rgba(255,255,255,0.18)';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.globalCompositeOperation = 'source-over';
+  }
+  if (tool.slug === 'remove-background') {
+    const data = context.getImageData(0, 0, canvas.width, canvas.height);
+    for (let index = 0; index < data.data.length; index += 4) {
+      if (data.data[index] > 235 && data.data[index + 1] > 235 && data.data[index + 2] > 235) data.data[index + 3] = 0;
+    }
+    context.putImageData(data, 0, 0);
+  }
+
+  const wantsJpeg = tool.slug.includes('compress') || tool.slug.includes('format');
+  const mime = wantsJpeg ? 'image/jpeg' : 'image/png';
+  const extension = wantsJpeg ? 'jpg' : 'png';
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, mime, tool.slug.includes('compress') ? 0.68 : 0.92));
+  if (!blob) throw new Error('Could not export image.');
+  return { name: `${getBaseName(imageFile.name)}-${tool.slug}.${extension}`, mime, bytes: new Uint8Array(await blob.arrayBuffer()) };
+}
+
+async function ocrImage(file: File) {
+  const { createWorker } = await import('tesseract.js');
+  const worker = await createWorker('eng');
+  try {
+    const result = await worker.recognize(file);
+    return textFile(`${getBaseName(file.name)}-ocr.txt`, 'text/plain', result.data.text || 'No text recognized.');
+  } finally {
+    await worker.terminate();
+  }
+}
+
 async function processPdf(file: File, tool: PdfTool, pagesInput: string, textInput: string) {
   let input: PDFDocument;
   try {
@@ -339,8 +575,12 @@ async function processPdf(file: File, tool: PdfTool, pagesInput: string, textInp
   };
 
   if (tool.slug === 'split-pdf') return splitPdf(file);
+  if (tool.slug === 'booklet-pdf') return buildBooklet(file);
+  if (tool.slug === 'pages-per-sheet') return pagesPerSheet(file);
 
-  if (tool.slug.includes('delete-pages')) {
+  if (/organize-pages|reorder-pages|rearrange-pages/.test(tool.slug)) {
+    await copySelection(selection.length ? selection : input.getPageIndices());
+  } else if (tool.slug.includes('delete-pages')) {
     const excluded = new Set(selection);
     await copySelection(input.getPageIndices().filter((index) => !excluded.has(index)));
   } else if (tool.slug.includes('extract-pages')) {
@@ -353,7 +593,7 @@ async function processPdf(file: File, tool: PdfTool, pagesInput: string, textInp
     output.getPages().forEach((page) => page.setRotation(degrees(90)));
   } else if (tool.slug.includes('add-blank-pages')) {
     await copySelection(input.getPageIndices());
-    const firstPage = output.getPage(0);
+    const firstPage = output.getPages()[0] || input.getPage(0);
     const { width, height } = firstPage.getSize();
     output.addPage([width, height]);
   } else if (tool.slug.includes('crop')) {
@@ -373,19 +613,36 @@ async function processPdf(file: File, tool: PdfTool, pagesInput: string, textInp
 
   const label = textInput.trim() || tool.name;
   const needsTextOverlay =
-    /add-text|add-comments|sticky|annotate|highlight|underline|strike|shape|draw|watermark|header|footer|background|bates|stamp|sign|fill|page-numbers/.test(tool.slug);
+    /edit-pdf-text|edit-images|add-images|add-text|add-comments|sticky|annotate|highlight|underline|strike|shape|draw|watermark|header|footer|background|bates|stamp|sign|fill|request-signatures|create-fillable|page-numbers/.test(tool.slug);
 
   if (needsTextOverlay) {
     output.getPages().forEach((page, index) => {
       const { width, height } = page.getSize();
       if (tool.slug.includes('page-numbers') || tool.slug.includes('bates')) {
-        page.drawText(`${index + 1}`, { x: width / 2 - 8, y: 24, size: 10, font, color: brand });
+        const prefix = tool.slug.includes('bates') ? 'BATES-' : '';
+        page.drawText(`${prefix}${String(index + 1).padStart(4, '0')}`, { x: width / 2 - 28, y: 24, size: 10, font, color: brand });
       } else if (tool.slug.includes('header')) {
         page.drawText(label, { x: 40, y: height - 36, size: 11, font, color: brand });
       } else if (tool.slug.includes('footer')) {
         page.drawText(label, { x: 40, y: 24, size: 11, font, color: brand });
       } else if (tool.slug.includes('watermark') || tool.slug.includes('background')) {
-        page.drawText(label, { x: width * 0.18, y: height * 0.5, size: 42, font, color: rgb(0, 70 / 255, 67 / 255), rotate: degrees(30), opacity: 0.18 });
+        page.drawText(label, { x: width * 0.18, y: height * 0.5, size: 42, font, color: brand, rotate: degrees(30), opacity: 0.18 });
+      } else if (tool.slug.includes('highlight')) {
+        page.drawRectangle({ x: 44, y: height - 92, width: Math.min(280, width - 88), height: 24, color: gold, opacity: 0.35 });
+        page.drawText(label, { x: 48, y: height - 86, size: 12, font, color: brand });
+      } else if (tool.slug.includes('underline')) {
+        page.drawText(label, { x: 48, y: height - 72, size: 14, font, color: brand });
+        page.drawLine({ start: { x: 48, y: height - 78 }, end: { x: 48 + Math.min(260, label.length * 7), y: height - 78 }, thickness: 1.5, color: brand });
+      } else if (tool.slug.includes('strike')) {
+        page.drawText(label, { x: 48, y: height - 72, size: 14, font, color: brand });
+        page.drawLine({ start: { x: 48, y: height - 67 }, end: { x: 48 + Math.min(260, label.length * 7), y: height - 67 }, thickness: 1.5, color: brand });
+      } else if (tool.slug.includes('shape') || tool.slug.includes('draw')) {
+        page.drawRectangle({ x: 42, y: height - 112, width: 180, height: 58, borderColor: brand, borderWidth: 2, opacity: 0.9 });
+        page.drawText(label, { x: 54, y: height - 82, size: 12, font, color: brand });
+      } else if (tool.slug.includes('sign') || tool.slug.includes('signature')) {
+        page.drawText(label, { x: width - 220, y: 72, size: 16, font, color: brand });
+        page.drawLine({ start: { x: width - 230, y: 62 }, end: { x: width - 48, y: 62 }, thickness: 1, color: brand });
+        page.drawText('Signature', { x: width - 230, y: 44, size: 8, font, color: brand });
       } else {
         page.drawText(label, { x: 48, y: height - 72, size: 14, font, color: brand });
       }
@@ -408,15 +665,19 @@ async function processPdf(file: File, tool: PdfTool, pagesInput: string, textInp
 }
 
 function acceptsMultiple(tool: PdfTool) {
-  return /merge|batch|zip|jpg-to-pdf|png-to-pdf|webp-to-pdf|image|pages-per-sheet/.test(tool.slug);
+  return /merge|batch|zip|jpg-to-pdf|png-to-pdf|webp-to-pdf|tiff-to-pdf|heic-to-pdf|svg-to-pdf|image|pages-per-sheet|scan-to-pdf|create-pdf|add-images|edit-images/.test(tool.slug);
 }
 
 function requiresPages(tool: PdfTool) {
-  return /extract-pages|delete-pages|duplicate-pages|split-pdf/.test(tool.slug);
+  return /organize-pages|reorder-pages|rearrange-pages|extract-pages|delete-pages|duplicate-pages|split-pdf/.test(tool.slug);
 }
 
 function requiresText(tool: PdfTool) {
-  return /add-text|comments|sticky|annotate|watermark|header|footer|background|bates|stamp|sign|fill|highlight|underline|strike|shape|draw/.test(tool.slug);
+  return /edit-pdf-text|edit-images|add-images|add-text|comments|sticky|annotate|watermark|header|footer|background|bates|stamp|sign|fill|request-signatures|create-fillable|highlight|underline|strike|shape|draw|watermark-image/.test(tool.slug);
+}
+
+function canGenerateWithoutUpload(tool: PdfTool) {
+  return /templates|forms|cloud-storage-integration|recent-files|file-history|create-pdf/.test(tool.slug);
 }
 
 function isToPdfTool(tool: PdfTool) {
@@ -424,7 +685,7 @@ function isToPdfTool(tool: PdfTool) {
 }
 
 async function runTool(tool: PdfTool, files: File[], pagesInput: string, textInput: string): Promise<OutputFile> {
-  if (files.length === 0) throw new Error('Please upload a file to continue.');
+  if (files.length === 0 && !canGenerateWithoutUpload(tool)) throw new Error('Please upload a file to continue.');
 
   if (tool.slug === 'merge-pdf' || tool.slug === 'batch-processing') return mergePdf(files);
   if (tool.slug === 'zip-multiple-pdfs') {
@@ -438,11 +699,26 @@ async function runTool(tool: PdfTool, files: File[], pagesInput: string, textInp
       bytes: new Uint8Array(await zip.generateAsync({ type: 'arraybuffer' })),
     };
   }
+  if (/templates|forms/.test(tool.slug)) return createTemplatePdf(tool, textInput);
+  if (/cloud-storage-integration|recent-files|file-history|pdf-viewer|document-preview|print-pdf|download-pdf|share-pdf|scan-to-pdf|create-pdf/.test(tool.slug)) return createUtilityOutput(tool, files, textInput);
+  if (/word-tools|excel-tools|powerpoint-tools|html-tools|text-tools|markdown-tools/.test(tool.slug)) return documentsToPdf(files, tool.name);
+  if (/compress-image|resize-image|crop-image|rotate-image|flip-image|convert-image-format|remove-background|enhance-image|watermark-image/.test(tool.slug)) return processImageTool(tool, files, textInput);
+  if (tool.slug === 'image-ocr' || tool.slug === 'ocr-images') {
+    const image = files.find(isImage);
+    if (!image) throw new Error('Please upload an image for OCR.');
+    return ocrImage(image);
+  }
   if (isToPdfTool(tool) && files.some(isImage)) return convertImagesToPdf(files, tool.name);
-  if (isToPdfTool(tool) && files.some(isTextLike)) return textToPdf(files, tool.name);
+  if (isToPdfTool(tool) && files.some((file) => isTextLike(file) || isOfficeLike(file))) return documentsToPdf(files, tool.name);
 
   const firstPdf = files.find(isPdf);
-  if (!firstPdf) throw new Error('This tool currently needs a PDF, image, or text file that can be processed locally.');
+  if (!firstPdf) throw new Error('Please upload a PDF, image, office document, or text file supported by this tool.');
+  if (tool.slug === 'extract-metadata' || tool.slug === 'verify-digital-signature') return extractPdfMetadata(firstPdf);
+  if (tool.slug === 'ocr-pdf' || tool.slug === 'searchable-pdf') {
+    const text = await extractPdfText(firstPdf);
+    if (text.trim()) return convertPdfToTextLike(firstPdf, { ...tool, slug: 'pdf-to-txt' });
+    return textFile(`${getBaseName(firstPdf.name)}-ocr-needed.txt`, 'text/plain', 'This appears to be a scanned PDF. Browser OCR for full PDF pages is ready for server/API integration; use PDF to PNG and Image OCR for page-level OCR today.');
+  }
   if (isPdfToTextTool(tool)) return convertPdfToTextLike(firstPdf, tool);
   if (isPdfToImageTool(tool)) return convertPdfToImages(firstPdf, tool);
   return processPdf(firstPdf, tool, pagesInput, textInput);
@@ -554,6 +830,7 @@ export default function PdfToolRunner({ tool }: PdfToolRunnerProps) {
             ref={inputRef}
             type="file"
             multiple={acceptsMultiple(tool)}
+            accept=".pdf,.txt,.md,.html,.csv,.rtf,.json,.docx,.xlsx,.pptx,.odt,.ods,.odp,.epub,.png,.jpg,.jpeg,.webp,.svg,.tif,.tiff,.heic,application/pdf,image/*,text/*"
             onChange={(event) => event.target.files && setSelectedFiles(event.target.files)}
             className="hidden"
           />
@@ -628,7 +905,7 @@ export default function PdfToolRunner({ tool }: PdfToolRunnerProps) {
           <button
             type="button"
             onClick={process}
-            disabled={isProcessing || files.length === 0}
+            disabled={isProcessing || (files.length === 0 && !canGenerateWithoutUpload(tool))}
             className="inline-flex items-center justify-center rounded-2xl bg-[#872341] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#872341]/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
